@@ -37,6 +37,7 @@ enum glyph_attribute {
 	ATTR_WRAP       = 1 << 8,
 	ATTR_WIDE       = 1 << 9,
 	ATTR_WDUMMY     = 1 << 10,
+    ATTR_BOXDRAW    = 1 << 11,
 	ATTR_BOLD_FAINT = ATTR_BOLD | ATTR_FAINT,
 };
 
@@ -66,6 +67,51 @@ enum term_mode {
 	MODE_SIXEL       = 1 << 22,
 	MODE_MOUSE       = MODE_MOUSEBTN|MODE_MOUSEMOTION|MODE_MOUSEX10\
 	                  |MODE_MOUSEMANY,
+};
+
+enum boxdraw_type {
+    BOX_LINE  = 0,
+    BOX_BLOCK = 1,
+};
+
+enum boxdraw_args {
+    BOXLINE_LIGHT_UP     = 1 << 0,
+    BOXLINE_LIGHT_RIGHT  = 1 << 1,
+    BOXLINE_LIGHT_DOWN   = 1 << 2,
+    BOXLINE_LIGHT_LEFT   = 1 << 3,
+    BOXLINE_HEAVY_UP     = 1 << 4,
+    BOXLINE_HEAVY_RIGHT  = 1 << 5,
+    BOXLINE_HEAVY_DOWN   = 1 << 6,
+    BOXLINE_HEAVY_LEFT   = 1 << 7,
+    BOXLINE_DOUBLE_UP    = 1 << 8,
+    BOXLINE_DOUBLE_RIGHT = 1 << 9,
+    BOXLINE_DOUBLE_DOWN  = 1 << 10,
+    BOXLINE_DOUBLE_LEFT  = 1 << 11,
+
+    BOXBLOCK_UPPER_HALF          = 0,
+    BOXBLOCK_LOWER_ONE_EIGHTHS   = 1,
+    BOXBLOCK_LOWER_TWO_EIGHTHS   = 2,
+    BOXBLOCK_LOWER_THREE_EIGHTHS = 3,
+    BOXBLOCK_LOWER_FOUR_EIGHTHS  = 4,
+    BOXBLOCK_LOWER_FIVE_EIGHTHS  = 5,
+    BOXBLOCK_LOWER_SIX_EIGHTHS   = 6,
+    BOXBLOCK_LOWER_SEVEN_EIGHTHS = 7,
+    BOXBLOCK_FULL_BLOCK          = 8,
+    BOXBLOCK_LEFT_ONE_EIGHTHS    = 9,
+    BOXBLOCK_LEFT_TWO_EIGHTHS    = 10,
+    BOXBLOCK_LEFT_THREE_EIGHTHS  = 11,
+    BOXBLOCK_LEFT_FOUR_EIGHTHS   = 12,
+    BOXBLOCK_LEFT_FIVE_EIGHTHS   = 13,
+    BOXBLOCK_LEFT_SIX_EIGHTHS    = 14,
+    BOXBLOCK_LEFT_SEVEN_EIGHTHS  = 15,
+    BOXBLOCK_RIGHT_HALF          = 16,
+    /* TODO: shades */
+    BOXBLOCK_UPPER_ONE_EIGHTH    = 20,
+    BOXBLOCK_RIGHT_ONE_EIGHTH    = 21,
+    BOXBLOCK_QUAD_LOWER_LEFT     = 1 << 4,
+    BOXBLOCK_QUAD_LOWER_RIGHT    = 1 << 5,
+    BOXBLOCK_QUAD_UPPER_LEFT     = 1 << 6,
+    BOXBLOCK_QUAD_UPPER_RIGHT    = 1 << 7,
 };
 
 enum selection_mode {
@@ -101,6 +147,8 @@ typedef struct {
 	ushort mode;      /* attribute flags */
 	uint32_t fg;      /* foreground  */
 	uint32_t bg;      /* background  */
+	uint8_t boxtype; /* box drawing type (line, block, ...) */
+	uint16_t boxargs; /* box drawing info (vertical, bottom half, ...) */
 } Glyph;
 
 typedef Glyph *Line;

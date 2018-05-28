@@ -94,7 +94,7 @@ typedef struct {
 
 static inline ushort sixd_to_16bit(int);
 static int xmakeglyphfontspecs(XftGlyphFontSpec *, const Glyph *, int, int, int);
-static void xdrawglyphfontspecs(const XftGlyphFontSpec *, Glyph, int, int, int);
+static void xdrawglyphfontspecs(const XftGlyphFontSpec *, Glyph, int, int, int, Glyph *);
 static void xdrawglyph(Glyph, int, int);
 static void xclear(int, int, int, int);
 static void xdrawcursor(void);
@@ -1205,21 +1205,23 @@ xmakeglyphfontspecs(XftGlyphFontSpec *specs, const Glyph *glyphs, int len, int x
 }
 
 void
-xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, int y)
+xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, int y, Glyph *charp)
 {
 	int charlen = len * ((base.mode & ATTR_WIDE) ? 2 : 1);
 	int winx = borderpx + x * win.cw, winy = borderpx + y * win.ch,
-	    width = charlen * win.cw;
+		width = charlen * win.cw;
 	Color *fg, *bg, *temp, revfg, revbg, truefg, truebg;
 	XRenderColor colfg, colbg;
 	XRectangle r;
+
+	/* printf("drawing %x (%c)\n", base.u, base.u); */
 
 	/* Fallback on color display for attributes not supported by the font */
 	if (base.mode & ATTR_ITALIC && base.mode & ATTR_BOLD) {
 		if (dc.ibfont.badslant || dc.ibfont.badweight)
 			base.fg = defaultattr;
 	} else if ((base.mode & ATTR_ITALIC && dc.ifont.badslant) ||
-	    (base.mode & ATTR_BOLD && dc.bfont.badweight)) {
+			(base.mode & ATTR_BOLD && dc.bfont.badweight)) {
 		base.fg = defaultattr;
 	}
 
@@ -1303,11 +1305,11 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
 	/* Intelligent cleaning up of the borders. */
 	if (x == 0) {
 		xclear(0, (y == 0)? 0 : winy, borderpx,
-			winy + win.ch + ((y >= term.row-1)? win.h : 0));
+				winy + win.ch + ((y >= term.row-1)? win.h : 0));
 	}
 	if (x + charlen >= term.col) {
 		xclear(winx + width, (y == 0)? 0 : winy, win.w,
-			((y >= term.row-1)? win.h : (winy + win.ch)));
+				((y >= term.row-1)? win.h : (winy + win.ch)));
 	}
 	if (y == 0)
 		xclear(winx, 0, winx + width, borderpx);
@@ -1325,7 +1327,73 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
 	XftDrawSetClipRectangles(xw.draw, winx, winy, &r, 1);
 
 	/* Render the glyphs. */
-	XftDrawGlyphFontSpec(xw.draw, fg, specs, len);
+	if (base.mode & ATTR_BOXDRAW) {
+		for (int i = 0; i < len; i++) {
+			uint8_t t = charp[i].boxtype;
+			uint16_t c = charp[i].boxargs;
+			int x = winx + win.cw * i;
+
+            switch (t) {
+            case BOX_LINE:
+                /* double lines */
+                if (c & BOXLINE_DOUBLE_UP)    XftDrawRect(xw.draw, fg, x + win.cw / 2 - 1, winy,                  3,                   win.ch - win.ch / 2);
+                if (c & BOXLINE_DOUBLE_RIGHT) XftDrawRect(xw.draw, fg, x + win.cw / 2,     winy + win.ch / 2 - 1, win.cw - win.cw / 2, 3);
+                if (c & BOXLINE_DOUBLE_DOWN)  XftDrawRect(xw.draw, fg, x + win.cw / 2 - 1, winy + win.ch / 2,     3,                   win.ch - win.ch / 2);
+                if (c & BOXLINE_DOUBLE_LEFT)  XftDrawRect(xw.draw, fg, x,                  winy + win.ch / 2 - 1, win.cw - win.cw / 2, 3);
+
+                /* gap in double lines */
+                if (c & BOXLINE_DOUBLE_UP)    XftDrawRect(xw.draw, bg, x + win.cw / 2, winy,              1,                   win.ch - win.ch / 2);
+                if (c & BOXLINE_DOUBLE_RIGHT) XftDrawRect(xw.draw, bg, x + win.cw / 2, winy + win.ch / 2, win.cw - win.cw / 2, 1);
+                if (c & BOXLINE_DOUBLE_DOWN)  XftDrawRect(xw.draw, bg, x + win.cw / 2, winy + win.ch / 2, 1,                   win.ch - win.ch / 2);
+                if (c & BOXLINE_DOUBLE_LEFT)  XftDrawRect(xw.draw, bg, x,              winy + win.ch / 2, win.cw - win.cw / 2, 1);
+
+                /* light lines */
+                if (c & BOXLINE_LIGHT_UP)    XftDrawRect(xw.draw, fg, x + win.cw / 2, winy,              1,                   win.ch - win.ch / 2);
+                if (c & BOXLINE_LIGHT_RIGHT) XftDrawRect(xw.draw, fg, x + win.cw / 2, winy + win.ch / 2, win.cw - win.cw / 2, 1);
+                if (c & BOXLINE_LIGHT_DOWN)  XftDrawRect(xw.draw, fg, x + win.cw / 2, winy + win.ch / 2, 1,                   win.ch - win.ch / 2);
+                if (c & BOXLINE_LIGHT_LEFT)  XftDrawRect(xw.draw, fg, x,              winy + win.ch / 2, win.cw - win.cw / 2, 1);
+
+                /* heavy lines */
+                if (c & BOXLINE_HEAVY_UP)    XftDrawRect(xw.draw, fg, x + win.cw / 2, winy,              2,                   win.ch - win.ch / 2);
+                if (c & BOXLINE_HEAVY_RIGHT) XftDrawRect(xw.draw, fg, x + win.cw / 2, winy + win.ch / 2, win.cw - win.cw / 2, 2);
+                if (c & BOXLINE_HEAVY_DOWN)  XftDrawRect(xw.draw, fg, x + win.cw / 2, winy + win.ch / 2, 2,                   win.ch - win.ch / 2);
+                if (c & BOXLINE_HEAVY_LEFT)  XftDrawRect(xw.draw, fg, x,              winy + win.ch / 2, win.cw - win.cw / 2, 2);
+                break;
+            case BOX_BLOCK:
+                switch (c) {
+                    case BOXBLOCK_UPPER_HALF:          XftDrawRect(xw.draw, fg, x,              winy,                  win.cw,              win.ch / 2);                     break;
+                    case BOXBLOCK_LOWER_ONE_EIGHTHS:   XftDrawRect(xw.draw, fg, x,              winy + win.ch * 7 / 8, win.cw,              win.ch - winy + win.ch * 7 / 8); break;
+                    case BOXBLOCK_LOWER_TWO_EIGHTHS:   XftDrawRect(xw.draw, fg, x,              winy + win.ch * 6 / 8, win.cw,              win.ch - winy + win.ch * 6 / 8); break;
+                    case BOXBLOCK_LOWER_THREE_EIGHTHS: XftDrawRect(xw.draw, fg, x,              winy + win.ch * 5 / 8, win.cw,              win.ch - winy + win.ch * 5 / 8); break;
+                    case BOXBLOCK_LOWER_FOUR_EIGHTHS:  XftDrawRect(xw.draw, fg, x,              winy + win.ch * 4 / 8, win.cw,              win.ch - winy + win.ch * 4 / 8); break;
+                    case BOXBLOCK_LOWER_FIVE_EIGHTHS:  XftDrawRect(xw.draw, fg, x,              winy + win.ch * 3 / 8, win.cw,              win.ch - winy + win.ch * 3 / 8); break;
+                    case BOXBLOCK_LOWER_SIX_EIGHTHS:   XftDrawRect(xw.draw, fg, x,              winy + win.ch * 2 / 8, win.cw,              win.ch - winy + win.ch * 2 / 8); break;
+                    case BOXBLOCK_LOWER_SEVEN_EIGHTHS: XftDrawRect(xw.draw, fg, x,              winy + win.ch * 1 / 8, win.cw,              win.ch - winy + win.ch * 1 / 8); break;
+                    case BOXBLOCK_FULL_BLOCK:          XftDrawRect(xw.draw, fg, x,              winy,                  win.cw,              win.ch);                         break;
+                    case BOXBLOCK_LEFT_ONE_EIGHTHS:    XftDrawRect(xw.draw, fg, x,              winy,                  win.cw * 1 / 8,      win.ch);                         break;
+                    case BOXBLOCK_LEFT_TWO_EIGHTHS:    XftDrawRect(xw.draw, fg, x,              winy,                  win.cw * 2 / 8,      win.ch);                         break;
+                    case BOXBLOCK_LEFT_THREE_EIGHTHS:  XftDrawRect(xw.draw, fg, x,              winy,                  win.cw * 3 / 8,      win.ch);                         break;
+                    case BOXBLOCK_LEFT_FOUR_EIGHTHS:   XftDrawRect(xw.draw, fg, x,              winy,                  win.cw * 4 / 8,      win.ch);                         break;
+                    case BOXBLOCK_LEFT_FIVE_EIGHTHS:   XftDrawRect(xw.draw, fg, x,              winy,                  win.cw * 5 / 8,      win.ch);                         break;
+                    case BOXBLOCK_LEFT_SIX_EIGHTHS:    XftDrawRect(xw.draw, fg, x,              winy,                  win.cw * 6 / 8,      win.ch);                         break;
+                    case BOXBLOCK_LEFT_SEVEN_EIGHTHS:  XftDrawRect(xw.draw, fg, x,              winy,                  win.cw * 7 / 8,      win.ch);                         break;
+                    case BOXBLOCK_RIGHT_HALF:          XftDrawRect(xw.draw, fg, x + win.cw / 2, winy,                  win.cw - win.cw / 2, win.ch);                         break;
+                    /* TODO: shades */
+                    case BOXBLOCK_UPPER_ONE_EIGHTH:    XftDrawRect(xw.draw, fg, x,                  winy, win.cw,              win.ch / 8); break;
+                    case BOXBLOCK_RIGHT_ONE_EIGHTH:    XftDrawRect(xw.draw, fg, x + win.cw * 7 / 8, winy, win.cw - win.cw / 8, win.ch);     break;
+                    default:
+                        if (c & BOXBLOCK_QUAD_LOWER_LEFT ) XftDrawRect(xw.draw, fg, x,              winy + win.ch / 2, win.cw / 2,          win.ch - win.ch / 2);
+                        if (c & BOXBLOCK_QUAD_LOWER_RIGHT) XftDrawRect(xw.draw, fg, x + win.cw / 2, winy + win.ch / 2, win.cw - win.cw / 2, win.ch - win.ch / 2);
+                        if (c & BOXBLOCK_QUAD_UPPER_LEFT ) XftDrawRect(xw.draw, fg, x,              winy,              win.cw / 2,          win.ch / 2);
+                        if (c & BOXBLOCK_QUAD_UPPER_RIGHT) XftDrawRect(xw.draw, fg, x + win.cw / 2, winy,              win.cw - win.cw / 2, win.ch / 2);
+                        break;
+                }
+                break;
+            }
+        }
+    } else {
+        XftDrawGlyphFontSpec(xw.draw, fg, specs, len);
+    }
 
 	/* Render underline and strikethrough. */
 	if (base.mode & ATTR_UNDERLINE) {
@@ -1349,7 +1417,7 @@ xdrawglyph(Glyph g, int x, int y)
 	XftGlyphFontSpec spec;
 
 	numspecs = xmakeglyphfontspecs(&spec, &g, 1, x, y);
-	xdrawglyphfontspecs(&spec, g, numspecs, x, y);
+	xdrawglyphfontspecs(&spec, g, numspecs, x, y, &g);
 }
 
 void
@@ -1492,7 +1560,8 @@ void
 drawregion(int x1, int y1, int x2, int y2)
 {
 	int i, x, y, ox, numspecs;
-	Glyph base, new;
+	Glyph base;
+    Glyph *gp, *new;
 	XftGlyphFontSpec *specs;
 	int ena_sel = sel.ob.x != -1 && sel.alt == IS_SET(MODE_ALTSCREEN);
 
@@ -1510,25 +1579,28 @@ drawregion(int x1, int y1, int x2, int y2)
 
 		i = ox = 0;
 		for (x = x1; x < x2 && i < numspecs; x++) {
-			new = TLINE(y)[x];
-			if (new.mode == ATTR_WDUMMY)
+			new = &TLINE(y)[x];
+			if (new->mode == ATTR_WDUMMY)
 				continue;
 			if (ena_sel && selected(x, y))
-				new.mode ^= ATTR_REVERSE;
-			if (i > 0 && ATTRCMP(base, new)) {
-				xdrawglyphfontspecs(specs, base, i, ox, y);
+				new->mode ^= ATTR_REVERSE;
+			if (i > 0 && ATTRCMP(base, *new)) {
+				xdrawglyphfontspecs(specs, base, i, ox, y, gp);
 				specs += i;
 				numspecs -= i;
 				i = 0;
 			}
 			if (i == 0) {
 				ox = x;
-				base = new;
+				base = *new;
+                gp = new;
 			}
+			if (ena_sel && selected(x, y))
+				new->mode ^= ATTR_REVERSE;
 			i++;
 		}
 		if (i > 0)
-			xdrawglyphfontspecs(specs, base, i, ox, y);
+			xdrawglyphfontspecs(specs, base, i, ox, y, gp);
 	}
 	if (term.scr == 0)
 		xdrawcursor();
