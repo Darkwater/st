@@ -1214,8 +1214,6 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
 	XRenderColor colfg, colbg;
 	XRectangle r;
 
-	/* printf("drawing %x (%c)\n", base.u, base.u); */
-
 	/* Fallback on color display for attributes not supported by the font */
 	if (base.mode & ATTR_ITALIC && base.mode & ATTR_BOLD) {
 		if (dc.ibfont.badslant || dc.ibfont.badweight)
@@ -1382,9 +1380,9 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
                     case BOXBLOCK_UPPER_ONE_EIGHTH:    XftDrawRect(xw.draw, fg, x,                  winy, win.cw,              win.ch / 8); break;
                     case BOXBLOCK_RIGHT_ONE_EIGHTH:    XftDrawRect(xw.draw, fg, x + win.cw * 7 / 8, winy, win.cw - win.cw / 8, win.ch);     break;
                     default:
-                        if (c & BOXBLOCK_QUAD_LOWER_LEFT ) XftDrawRect(xw.draw, fg, x,              winy + win.ch / 2, win.cw / 2,          win.ch - win.ch / 2);
+                        if (c & BOXBLOCK_QUAD_LOWER_LEFT)  XftDrawRect(xw.draw, fg, x,              winy + win.ch / 2, win.cw / 2,          win.ch - win.ch / 2);
                         if (c & BOXBLOCK_QUAD_LOWER_RIGHT) XftDrawRect(xw.draw, fg, x + win.cw / 2, winy + win.ch / 2, win.cw - win.cw / 2, win.ch - win.ch / 2);
-                        if (c & BOXBLOCK_QUAD_UPPER_LEFT ) XftDrawRect(xw.draw, fg, x,              winy,              win.cw / 2,          win.ch / 2);
+                        if (c & BOXBLOCK_QUAD_UPPER_LEFT)  XftDrawRect(xw.draw, fg, x,              winy,              win.cw / 2,          win.ch / 2);
                         if (c & BOXBLOCK_QUAD_UPPER_RIGHT) XftDrawRect(xw.draw, fg, x + win.cw / 2, winy,              win.cw - win.cw / 2, win.ch / 2);
                         break;
                 }
