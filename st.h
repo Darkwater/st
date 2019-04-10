@@ -1,5 +1,11 @@
 /* See LICENSE for license details. */
 
+#include <stdint.h>
+#include <time.h>
+
+/* name collision */
+#define Glyph Glyph_
+
 /* Arbitrary sizes */
 #define UTF_SIZ       4
 #define histsize   5000
@@ -37,6 +43,7 @@ enum glyph_attribute {
 	ATTR_WRAP       = 1 << 8,
 	ATTR_WIDE       = 1 << 9,
 	ATTR_WDUMMY     = 1 << 10,
+	ATTR_BOXDRAW    = 1 << 11,
 	ATTR_BOLD_FAINT = ATTR_BOLD | ATTR_FAINT,
 };
 
@@ -122,7 +129,7 @@ typedef struct {
 	int histi;    /* history index */
 	int scr;      /* scroll back */
 	int *dirty;  /* dirtyness of lines */
-	GlyphFontSpec *specbuf; /* font spec buffer used for rendering */
+	XftGlyphFontSpec *specbuf; /* font spec buffer used for rendering */
 	TCursor c;    /* cursor */
 	int top;      /* top    scroll limit */
 	int bot;      /* bottom scroll limit */
@@ -250,6 +257,14 @@ extern char *usedfont;
 extern double usedfontsize;
 extern double defaultfontsize;
 
+int isboxdraw(Rune);
+ushort boxdrawindex(const Glyph *);
+#ifdef XFT_VERSION
+/* only exposed to x.c, otherwise we'll need Xft.h for the types */
+void boxdraw_xinit(Display *, Colormap, XftDraw *, Visual *);
+void drawboxes(int, int, int, int, XftColor *, XftColor *, const XftGlyphFontSpec *, int);
+#endif
+
 /* config.h globals */
 extern char font[];
 extern int borderpx;
@@ -277,6 +292,7 @@ extern unsigned int mouseshape;
 extern unsigned int mousefg;
 extern unsigned int mousebg;
 extern unsigned int defaultattr;
+extern const int boxdraw, boxdraw_bold, boxdraw_braille;
 extern MouseShortcut mshortcuts[];
 extern MouseKey mkeys[];
 extern size_t mshortcutslen;
